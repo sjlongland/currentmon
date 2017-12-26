@@ -3,14 +3,14 @@
 #
 # License: Public Domain
 
-CROSS = arm-none-eabi-
+CROSS ?= arm-none-eabi-
 CPU = -mthumb -mcpu=cortex-m0plus -MD
 FPU = # -mfloat-abi=soft
 
 FILENAME = currentmon
 LINKERSCRIPT = currentmon.ld
 
-CFLAGS+= -Os --specs=nano.specs -ffunction-sections -fdata-sections -fno-builtin
+CFLAGS += -Os --specs=nano.specs -ffunction-sections -fdata-sections -fno-builtin
 
 CC = ${CROSS}gcc
 LD = ${CROSS}ld
@@ -25,9 +25,8 @@ LIBGCC = "${shell ${CC} ${CFLAGS} --print-libgcc-file-name}"
 CFLAGS += $(CPU) $(FPU)
 LDFLAGS += --gc-sections
 
-
-INC += -I../cmsis
-CFLAGS += $(INC) -D__USE_CMSIS # -DCLOCK_SETUP=1
+INC += -I../cmsis -I../third_party/lpcopen/lpc_chip_8xx/inc
+CPPFLAGS += $(INC) -D__USE_CMSIS -DINLINE=inline
 
 I2CUART_OBJS = main.o \
               system_LPC8xx.o \
