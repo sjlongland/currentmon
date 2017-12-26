@@ -58,3 +58,22 @@ not-listed addresses read as zero):
   * 4/0014 `int16_t` Energy denominator
   * 4/0015 `uint16_t` Energy sampling interval in msec.  (0-65.535s)
   * 4/0016 `uint16_t` Modbus ID
+
+LICENSE
+-------
+
+Excluding code in the `third_party` directory; all code in this repository is
+licensed under the GPLv2.  See [COPYING](COPYING) for details.
+
+This code uses the ROM functions in the LPC series MCUs licensed by NXP.  NXP
+licenses this code *only* for use on its MCUs and ships that code in mask-ROM
+on the dies of the LPC81xM MCUs, the code is not present in binaries produced
+from this code.
+
+To use binaries built from this code on non-NXP MCUs, you will need to provide
+compatible implementations of these routines at the same addresses as the NXP
+mask-ROM.
+
+I suggest that patches for the source to support an alternative library will be
+more productive, and such patches will be considered for inclusion so long as
+they don't break existing functionality.
