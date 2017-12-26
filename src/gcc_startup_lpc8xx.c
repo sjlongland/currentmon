@@ -12,6 +12,8 @@
 #include "LPC8xx.h"
 #endif
 
+/* Forward declaration of main, silences warning from gcc */
+extern int main(void);
 
 //*****************************************************************************
 //
