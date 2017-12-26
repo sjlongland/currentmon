@@ -18,7 +18,29 @@
  * USA
  */
 
+#include <string.h>
+#include <assert.h>
 #include "LPC8xx.h"
+#include "romapi_8xx.h"
+
+/*! Assert handling */
+void __assert_func(const char* expr, int line,
+		const char* file, const char* func) {
+	/* Ignore these */
+	(void)expr;
+	(void)line;
+	(void)file;
+	(void)func;
+
+	/* Hang here */
+	while(1);
+}
+
+/*! I2C control interface */
+static I2C_HANDLE_T* i2c;
+
+/*! UART control interface */
+static UART_HANDLE_T* uart;
 
 /* ----- Core application ----- */
 
@@ -138,15 +160,45 @@ int main(void) {
 	LPC_GPIO_PORT->DIR0 = 1 << 1;
 	LPC_GPIO_PORT->CLR0 = 1 << 1;
 
-	/* ----- I2C setup ----- */
+	/* ----- I2C setup: master mode at 100kHz bitrate ----- */
 
-	LPC_I2C->CFG = (1 << 0);	/* Enable master */
+	uint32_t _i2c_mem[LPC_I2CD_API->i2c_get_mem_size() + 3/4];
+	i2c = LPC_I2CD_API->i2c_setup(LPC_I2C_BASE, _i2c_mem);
+	assert(i2c != NULL);
+	assert(LPC_I2CD_API->i2c_set_bitrate(i2c,
+				SystemCoreClock,
+				100000) == LPC_OK);
+
+	/* ----- UART setup ----- */
+
+	uint32_t _uart_mem[LPC_UARTD_API->uart_get_mem_size() + 3/4];
+	{
+		uint32_t frg_mult;
+		UART_CONFIG_T _uart_cfg = {
+			.sys_clk_in_hz	= SystemCoreClock,
+			.baudrate_in_hz	= 115200,
+			.config 	= (0 << 4)	/* 1 stop bit */
+					| (0 << 2)	/* No parity */
+					| (1 << 0)	/* 8 bits */
+					,
+			.sync_mod	= 0,		/* Async mode */
+			.error_en	= 0,		/* No errors */
+		};
+
+		uart = LPC_UARTD_API->uart_setup(LPC_USART0_BASE,
+				(uint8_t*)_uart_mem);
+		assert(uart != NULL);
+
+		frg_mult = LPC_UARTD_API->uart_init(uart, &_uart_cfg);
+		assert(frg_mult != 0);
+		LPC_SYSCON->UARTFRGMULT = frg_mult;
+		LPC_SYSCON->UARTFRGDIV = 0xff;
+	}
 
 	/* ----- NVIC setup ----- */
 
 	NVIC->ISER[0] = ( /* UM10601 3.4.1 */
-			(1 << 3) |	/* Enable UART0 interrupts */
-			(1 << 8)	/* Enable I2C interrupts */
+			(1 << 3) 	/* Enable UART0 interrupts */
 	);
 
 	/* ----- Main loop ----- */
@@ -156,6 +208,7 @@ int main(void) {
 	}
 }
 
-void I2C_IRQHandler(void) {
-	/* TODO */
+/*! Interrupt handler for UART0; pass to ROM code */
+void UART0_IRQHandler(void) {
+	LPC_UARTD_API->uart_isr(uart);
 }
