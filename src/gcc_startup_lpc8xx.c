@@ -15,15 +15,9 @@
 /* Forward declaration of main, silences warning from gcc */
 extern int main(void);
 
-//*****************************************************************************
-//
-// Allocated stack space
-//
-//*****************************************************************************
-#define STACKSIZE 64
-
-static unsigned int StackMem[STACKSIZE];
-#define _pStackTop ((void *)((unsigned int)StackMem + sizeof(StackMem)))
+/* Stack locations… yes, as "functions" (ick!) */
+extern void _stack_bottom(void);
+extern void _stack_top(void);
 
 //*****************************************************************************
 
@@ -82,10 +76,11 @@ void PININT7_IRQHandler(void) ALIAS(IntDefaultHandler);
 //
 //*****************************************************************************
 extern void (* const g_pfnVectors[])(void);
+
 __attribute__ ((section(".isr_vector")))
 void (* const g_pfnVectors[])(void) = {
 	// Core Level - CM0plus
-    _pStackTop, //&_vStackTop,		// The initial stack pointer
+    &_stack_top,			// The initial stack pointer
     ResetISR,				// The reset handler
     NMI_Handler,			// The NMI handler
     HardFault_Handler,			// The hard fault handler
