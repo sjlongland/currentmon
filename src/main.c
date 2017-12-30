@@ -22,6 +22,15 @@
 #include <assert.h>
 #include "LPC8xx.h"
 #include "romapi_8xx.h"
+#include "uart.h"
+
+#include <stdint.h>
+#include <stdio.h>
+
+/* newlib glue */
+#include <reent.h>
+#include <errno.h>
+#include <unistd.h>
 
 /*! Assert handling */
 void __assert_func(const char* expr, int line,
@@ -38,9 +47,6 @@ void __assert_func(const char* expr, int line,
 
 /*! I2C control interface */
 static I2C_HANDLE_T* i2c;
-
-/*! UART control interface */
-static UART_HANDLE_T* uart;
 
 /* ----- Core application ----- */
 
@@ -68,6 +74,8 @@ int main(void) {
 		(1 << 11) |	/* assert FLASH reset */
 		(1 << 12)	/* assert ACMP reset */
 	);
+
+	SystemCoreClockUpdate();
 
 	/* ----- Switch matrix setup ----- */
 
@@ -169,31 +177,9 @@ int main(void) {
 				SystemCoreClock,
 				100000) == LPC_OK);
 
-	/* ----- UART setup ----- */
+	/* ----- UART setup → uart.c ----- */
 
-	uint32_t _uart_mem[LPC_UARTD_API->uart_get_mem_size() + 3/4];
-	{
-		uint32_t frg_mult;
-		UART_CONFIG_T _uart_cfg = {
-			.sys_clk_in_hz	= SystemCoreClock,
-			.baudrate_in_hz	= 115200,
-			.config 	= (0 << 4)	/* 1 stop bit */
-					| (0 << 2)	/* No parity */
-					| (1 << 0)	/* 8 bits */
-					,
-			.sync_mod	= 0,		/* Async mode */
-			.error_en	= 0,		/* No errors */
-		};
-
-		uart = LPC_UARTD_API->uart_setup(LPC_USART0_BASE,
-				(uint8_t*)_uart_mem);
-		assert(uart != NULL);
-
-		frg_mult = LPC_UARTD_API->uart_init(uart, &_uart_cfg);
-		assert(frg_mult != 0);
-		LPC_SYSCON->UARTFRGMULT = frg_mult;
-		LPC_SYSCON->UARTFRGDIV = 0xff;
-	}
+	uart_init();
 
 	/* ----- NVIC setup ----- */
 
@@ -203,12 +189,9 @@ int main(void) {
 
 	/* ----- Main loop ----- */
 
+	puts("Entering main loop\r\n");
 	while(1) {
+		puts("hello world\r\n");
 		/* TODO */
 	}
-}
-
-/*! Interrupt handler for UART0; pass to ROM code */
-void UART0_IRQHandler(void) {
-	LPC_UARTD_API->uart_isr(uart);
 }
