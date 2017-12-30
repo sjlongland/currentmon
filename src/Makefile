@@ -4,38 +4,44 @@
 # License: Public Domain
 
 CROSS ?= arm-none-eabi-
-CPU = -mthumb -mcpu=cortex-m0plus -MD
-FPU = # -mfloat-abi=soft
+CPU = -mthumb -mcpu=cortex-m0plus
+FPU = -mfloat-abi=soft
 
 FILENAME = currentmon
 LINKERSCRIPT = currentmon.ld
 
-CFLAGS += -Os --specs=nano.specs -ffunction-sections -fdata-sections -fno-builtin
+CFLAGS += -Werror -pedantic -Os -ffunction-sections -fdata-sections
 
 CC = ${CROSS}gcc
 LD = ${CROSS}ld
 OBJCOPY = ${CROSS}objcopy
 SIZE = ${CROSS}size
 
-# use these on the $(LD) line, as needed:
-LIBM = "${shell ${CC} ${CFLAGS} --print-file-name=libm.a}"
-LIBC = "${shell ${CC} ${CFLAGS} --print-file-name=libc.a}"
-LIBGCC = "${shell ${CC} ${CFLAGS} --print-libgcc-file-name}"
-
 CFLAGS += $(CPU) $(FPU)
-LDFLAGS += --gc-sections
+LDFLAGS += -Os \
+	   -nostartfiles \
+	   -nodefaultlibs \
+	   -nostdlib \
+	   -specs=nosys.specs \
+	   -specs=nano.specs \
+	   -Wl,--gc-sections \
+	   -Wl,-Map=$(FILENAME).map \
+	   -T$(LINKERSCRIPT) \
+
+LIBS += -lc -lnosys
 
 INC += -I../cmsis -I../third_party/lpcopen/lpc_chip_8xx/inc
 CPPFLAGS += $(INC) -D__USE_CMSIS -DINLINE=inline
 
-I2CUART_OBJS = main.o \
-              system_LPC8xx.o \
-              gcc_startup_lpc8xx.o
+CURRENTMON_OBJS = $(patsubst %.c,%.o,$(wildcard *.c))
+uart.o : CFLAGS += -fno-builtin
 
 all: $(FILENAME).bin
 
-$(FILENAME).axf: $(FILENAME).ld $(I2CUART_OBJS)
-	@$(LD) -o $@ $(LDFLAGS) -T $(LINKERSCRIPT) $(I2CUART_OBJS) $(LIBGCC)
+$(FILENAME).axf: $(LINKERSCRIPT) $(CURRENTMON_OBJS)
+	$(CC) $(LDFLAGS) -o $@ \
+		-Wl,--start-group $(CURRENTMON_OBJS) \
+		-Wl,--end-group $(LIBS)
 	-@echo ""
 	@$(SIZE) $(FILENAME).axf
 
