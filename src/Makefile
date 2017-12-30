@@ -28,7 +28,7 @@ LDFLAGS += -Os \
 	   -Wl,-Map=$(FILENAME).map \
 	   -T$(LINKERSCRIPT) \
 
-LIBS += -lc -lnosys
+LIBS += -lc -lnosys -lgcc
 
 INC += -I../cmsis -I../third_party/lpcopen/lpc_chip_8xx/inc
 CPPFLAGS += $(INC) -D__USE_CMSIS -DINLINE=inline
